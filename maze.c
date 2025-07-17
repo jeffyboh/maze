@@ -1,13 +1,11 @@
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-int max_x, max_y;
+#include "maze.h"
 
-int write_status(char *message)
-{
-  mvprintw(max_y -1, 0, message);
-}
+char **screen;
 
 int main() {
   int ch;     // character input is stored here
@@ -25,15 +23,29 @@ int main() {
   cbreak();   // disable line buffering
   curs_set(0); // hide the terminal's cursor
 
+  // get the screen size before we enter the loop. We will use this size in case the
+  // player resizes the terminal
+  getmaxyx(stdscr, SCREEN_HEIGHT, SCREEN_WIDTH);  // get the terminal size before we enter the loop
   keypad(stdscr, TRUE); // enables the keypad which will allow us to use arrow keys
 
+  // allocate the 2D array for the screen 
+  screen = (char **)malloc(SCREEN_HEIGHT * sizeof(char *));
+  if (screen == NULL) {
+    mvprintw(3, 0, "Unable to allocate memmory for the screen buffer");
+  }
+  for (int i; i < SCREEN_HEIGHT; i++) {
+    screen[i] = (char *)malloc(SCREEN_WIDTH * sizeof(char));
+    if (screen[i] == NULL) {
+       mvprintw(3, 0, "Unable to allocate memory for screen");
+       break;
+    }
+  }
+  
   // main input loop
   while ((ch = getch()) != 'q') {
-
-    clear();
-    getmaxyx(stdscr, max_y, max_x);
-    mvprintw(0, 0, "Text Based Cursor Movement - Press q to quit.");
-    mvprintw(1, 0, "Use arrow keys to move the @ cursor.");
+    initialize_screen_buffer();
+    write_string_to_buffer(0, 0, "Text Based Cursor Movement - Press q to quit.");
+    write_string_to_buffer(1, 0, "Use arrow keys to move the @ cursor.");
 
     for (int i=0; i<obstacle_height; i++) {
       for (int j=0; j<obstacle_width; j++) {
@@ -70,9 +82,9 @@ int main() {
     }
 
     if (next_y < 2) next_y = 2;
-    if (next_y >= max_y) next_y = max_y - 1;
+    if (next_y >= SCREEN_HEIGHT) next_y = SCREEN_HEIGHT - 1;
     if (next_x < 0) next_x = 0;
-    if (next_x >= max_x) next_x = max_x - 1;
+    if (next_x >= SCREEN_WIDTH) next_x = SCREEN_WIDTH - 1;
 
     if (next_x >= obstacle_x && next_x < obstacle_x + obstacle_width &&
       next_y >= obstacle_y && next_y < obstacle_y + obstacle_height) {
@@ -84,12 +96,54 @@ int main() {
       y = next_y;
     }
 
-    mvprintw(y, x, "@");  // move to the coordinates set in the switch statement
+    //mvprintw(y, x, "@");  // move to the coordinates set in the switch statement
+    screen[y][x] = '@';
+
+    // draw the screen
+    for (int i=0; i<SCREEN_HEIGHT; i++) {
+      for (int j=0; j<SCREEN_WIDTH; j++) {
+        mvaddch(i, j, screen[i][j]);
+      }
+    }
+
     refresh();
   }
+
+  // clean up the screen buffwr
+  for (int i=0; i<SCREEN_HEIGHT; i++) {
+    free(screen[i]);
+  }
+  free(screen);
 
   endwin();   // restore the terminal before exiting
 
   return 0;
+}
+
+void write_status(char *message)
+{
+  write_string_to_buffer(SCREEN_HEIGHT - 1, 0, message);
+}
+
+void initialize_screen_buffer() {
+  for (int i=0; i<SCREEN_HEIGHT; i++) {
+    for (int j=0; j<SCREEN_WIDTH; j++) {
+      screen[i][j] = ' ';
+    }
+  }
+}
+
+void write_string_to_buffer(int y, int x, const char *str) {
+  int len = strlen(str);
+  for (int i; i<len; i++) {
+    write_char_to_buffer(y, y+i, str[i]);
+  }
+}
+
+void write_char_to_buffer(int y, int x, char ch)
+{
+  if (y >= 0 && y < SCREEN_HEIGHT && x >= 0 && x < SCREEN_WIDTH) {
+    screen[y][x] = ch;
+  }
 }
 
