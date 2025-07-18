@@ -7,7 +7,7 @@ LIBS = ncurses
 all: $(BIN_DIR)/$(TARGET)
 
 $(BIN_DIR)/$(TARGET): $(SRC)
-	$(CC) $(SRC) -o $@ -l$(LIBS)
+	$(CC) $(SRC) -g -o $@ -l$(LIBS)
 
 
 clean:

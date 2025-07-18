@@ -16,6 +16,7 @@ int main() {
   int obstacle_y = 10;
   int obstacle_width = 10;
   int obstacle_height = 5;
+  char status_message[50];
 
   initscr();  // initialize ncurses
 
@@ -31,13 +32,20 @@ int main() {
   // allocate the 2D array for the screen 
   screen = (char **)malloc(SCREEN_HEIGHT * sizeof(char *));
   if (screen == NULL) {
-    mvprintw(3, 0, "Unable to allocate memmory for the screen buffer");
+    endwin();
+    fprintf(stderr, "Unable to allocate memory for screen  ");
+    return 1;
   }
-  for (int i; i < SCREEN_HEIGHT; i++) {
+  for (int i = 0; i < SCREEN_HEIGHT; i++) {
     screen[i] = (char *)malloc(SCREEN_WIDTH * sizeof(char));
     if (screen[i] == NULL) {
-       mvprintw(3, 0, "Unable to allocate memory for screen");
-       break;
+      endwin();
+      fprintf(stderr, "Unable to allocate screen rows. Cleaning up allocated memory.");
+      for (int j=0; j<i; j++) {
+        free(screen[j]);
+      }
+      free(screen);
+      return 1;
     }
   }
   
@@ -89,15 +97,16 @@ int main() {
     if (next_x >= obstacle_x && next_x < obstacle_x + obstacle_width &&
       next_y >= obstacle_y && next_y < obstacle_y + obstacle_height) {
       // we are blocked
-      write_status("We are blocked!");
     } else {
       // update the coordinates so movement can happen
       x = next_x;
       y = next_y;
     }
 
-    //mvprintw(y, x, "@");  // move to the coordinates set in the switch statement
-    screen[y][x] = '@';
+    write_char_to_buffer(y, x, '@');
+
+    sprintf(status_message, "(%d,%d)", x, y);
+    write_status(status_message);
 
     // draw the screen
     for (int i=0; i<SCREEN_HEIGHT; i++) {
@@ -135,8 +144,8 @@ void initialize_screen_buffer() {
 
 void write_string_to_buffer(int y, int x, const char *str) {
   int len = strlen(str);
-  for (int i; i<len; i++) {
-    write_char_to_buffer(y, y+i, str[i]);
+  for (int i=0; i<len; i++) {
+    write_char_to_buffer(y, x + i, str[i]);
   }
 }
 
@@ -146,4 +155,3 @@ void write_char_to_buffer(int y, int x, char ch)
     screen[y][x] = ch;
   }
 }
-
